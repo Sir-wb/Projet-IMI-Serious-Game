@@ -1,0 +1,23 @@
+# Environnements virtuels Python
+venv/
+env/
+.env/
+.venv/
+
+# Fichiers compilés et cache Python
+__pycache__/
+*.py[cod]
+*$py.class
+
+# Fichiers de configuration des éditeurs (IDE) et systèmes d'exploitation
+.vscode/
+.idea/
+.DS_Store
+Thumbs.db
+
+# Fichiers spécifiques au projet (Apprentissage par renforcement)
+logs/
+tb_logs/
+models/
+*.zip
+*.npy
