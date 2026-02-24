@@ -1,0 +1,11 @@
+# Cœur de l'environnement et calculs matriciels
+gymnasium>=0.29.0
+numpy>=1.24.0
+
+# Outils de rendu et de visualisation
+matplotlib>=3.7.0
+pygame>=2.5.0
+
+# Préparation pour l'IA avancée - à décommenter plus tard
+# stable-baselines3[extra]>=2.2.0
+# tensorboard>=2.15.0
