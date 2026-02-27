@@ -82,7 +82,10 @@ class HumanUI:
         self.log_file = f"logs/human_game_{datetime.now().strftime('%Y%m%d_%H%M%S')}.csv"
         with open(self.log_file, mode='w', newline='') as f: 
             csv.writer(f).writerow(["step", "actions", "score", "blackout"])
-
+            
+        # --- OPTIMIZATION: Pre-allocate Matplotlib Figure & Canvas ---
+        self.fig, self.ax = plt.subplots(figsize=(6, 4), dpi=100)
+        self.canvas = FigureCanvasAgg(self.fig)
     def setup_sliders(self, plants_info):
         self.sliders = [Slider(50, 520 + (i*70), 400, 25, i, p['name'], p['type'], p['p_max'], p['ramp_rate']) 
                         for i, p in enumerate(plants_info[:3])] 
@@ -96,38 +99,35 @@ class HumanUI:
             csv.writer(f).writerow([step, str(actions), score, blackout])
 
     def _render_matplotlib_to_pygame(self, forecast_data: dict, current_generation: float) -> pygame.Surface:
-        """Draws the 12h forecast graph, including demand and renewable predictions."""
-        fig, ax = plt.subplots(figsize=(6, 4), dpi=100)
-        x = np.arange(1, 13)
+        """Draws the 12h forecast graph using cached figures for high performance."""
+        # OPTIMIZATION: Clear the existing axes instead of creating a new figure
+        self.ax.clear()
         
+        x = np.arange(1, 13)
         demand_forecast = np.array(forecast_data.get("demand_forecast", [0]*12))
         solar_forecast = np.array(forecast_data.get("solar_forecast", [0]*12))
         wind_forecast = np.array(forecast_data.get("wind_forecast", [0]*12))
         
         uncertainty = demand_forecast * np.linspace(0.05, 0.40, 12)
         
-        # Plot Demand with uncertainty (Updated to GREEN)
-        ax.plot(x, demand_forecast, label="Demand Forecast", color='green', linewidth=2)
-        ax.fill_between(x, demand_forecast - uncertainty, demand_forecast + uncertainty, color='green', alpha=0.1)
+        self.ax.plot(x, demand_forecast, label="Demand Forecast", color='green', linewidth=2)
+        self.ax.fill_between(x, demand_forecast - uncertainty, demand_forecast + uncertainty, color='green', alpha=0.1)
         
-        # Plot Renewables as dashed lines (Solar = Orange, Wind = BLUE)
-        ax.plot(x, solar_forecast, label="Solar Forecast", color='#FFA500', linestyle='--', linewidth=2)
-        ax.plot(x, wind_forecast, label="Wind Forecast", color='blue', linestyle='--', linewidth=2)
+        self.ax.plot(x, solar_forecast, label="Solar Forecast", color='#FFA500', linestyle='--', linewidth=2)
+        self.ax.plot(x, wind_forecast, label="Wind Forecast", color='blue', linestyle='--', linewidth=2)
         
-        # Current output line
-        ax.axhline(y=current_generation, color='red', linestyle='-', linewidth=2, label=f"Current Output")
+        self.ax.axhline(y=current_generation, color='red', linestyle='-', linewidth=2, label=f"Current Output")
         
-        ax.set_title("12h Forecasts (Demand & Renewables)")
-        ax.set_xlabel("Upcoming Hours")
-        ax.set_ylabel("Power (MW)")
-        ax.legend(loc="upper left", fontsize='small') 
-        ax.grid(True, linestyle='--', alpha=0.6)
-        plt.tight_layout()
+        self.ax.set_title("12h Forecasts (Demand & Renewables)")
+        self.ax.set_xlabel("Upcoming Hours")
+        self.ax.set_ylabel("Power (MW)")
+        self.ax.legend(loc="upper left", fontsize='small') 
+        self.ax.grid(True, linestyle='--', alpha=0.6)
+        self.fig.tight_layout()
 
-        canvas = FigureCanvasAgg(fig)
-        canvas.draw()
-        surf = pygame.image.frombuffer(canvas.buffer_rgba(), canvas.get_width_height(), "RGBA")
-        plt.close(fig) 
+        # Draw on the pre-allocated canvas
+        self.canvas.draw()
+        surf = pygame.image.frombuffer(self.canvas.buffer_rgba(), self.canvas.get_width_height(), "RGBA")
         return surf
 
     def handle_events(self):
