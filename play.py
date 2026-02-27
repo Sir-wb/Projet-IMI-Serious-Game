@@ -19,7 +19,8 @@ def play_human():
         {
             "name": p.name, 
             "type": p.plant_type, 
-            "p_max": p.p_max, 
+            "p_max": p.p_max,
+            "p_min": p.p_min,
             "ramp_rate": p.ramp_rate
         } 
         for p in env.grid.plants

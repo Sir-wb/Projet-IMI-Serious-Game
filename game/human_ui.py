@@ -11,43 +11,125 @@ from datetime import datetime
 matplotlib.use("Agg")
 
 class Slider:
-    """A UI component to control the target power of a power plant."""
-    def __init__(self, x, y, w, h, index, name, plant_type, p_max, ramp_rate):
+    """A highly optimized UI component with full-height boundaries and a snap-to-zero shutdown mechanic."""
+    def __init__(self, x, y, w, h, index, name, plant_type, p_max, p_min, ramp_rate):
         self.rect = pygame.Rect(x, y, w, h)
         self.index = index
         self.name = name
         self.plant_type = plant_type
         self.p_max = p_max
+        self.p_min = p_min
         self.ramp_rate = ramp_rate
         
         self.current_power = 0.0
         self.value = 0.0  
         self.is_dragging = False
+        
+        self._turn_needs_update = True
+        self._drag_needs_update = True
+        
+        self._current_px = 0
+        self._fill_w = 0
+        self._notches = []
+        self._p_min_px = int((self.p_min / max(1.0, self.p_max)) * self.rect.w)
+        
+        self._text_name_surf = None
+        self._text_stats_surf = None
+        self._text_percent_surf = None
+        
+        self.fill_color = (200, 50, 50) if "gas" in plant_type else (50, 50, 50) if "coal" in plant_type else (50, 200, 50)
 
     def update_state(self, current_power):
-        self.current_power = current_power
+        """Updates the current power generation of the plant at the start of a turn."""
+        if self.current_power != current_power:
+            self.current_power = current_power
+            self._turn_needs_update = True
+            self._drag_needs_update = True 
 
-    def draw(self, screen, font, small_font):
-        pygame.draw.rect(screen, (200, 200, 200), self.rect, border_radius=5)
-        
-        fill_rect = pygame.Rect(self.rect.x, self.rect.y, int(self.rect.w * self.value), self.rect.h)
-        color = (200, 50, 50) if "gas" in self.plant_type else (50, 50, 50) if "coal" in self.plant_type else (50, 200, 50)
-        pygame.draw.rect(screen, color, fill_rect, border_radius=5)
-        
-        pygame.draw.rect(screen, (100, 100, 100), self.rect, 2, border_radius=5)
+    def _recalculate_turn_cache(self):
+        """Calculates the static time ruler, drawing notches all the way to 0 for shutdowns."""
+        self._current_px = int((self.current_power / max(1.0, self.p_max)) * self.rect.w)
 
+        self._notches = []
+        if self.ramp_rate > 0:
+            # Notches extending right
+            temp_mw = self.current_power + self.ramp_rate
+            step = 1
+            while temp_mw <= self.p_max + 0.1:
+                self._notches.append((int((temp_mw / self.p_max) * self.rect.w), step == 1))
+                temp_mw += self.ramp_rate
+                step += 1
+                
+            # Notches extending left (all the way to 0 to show shutdown time)
+            temp_mw = self.current_power - self.ramp_rate
+            step = 1
+            while temp_mw >= -0.1:
+                self._notches.append((int((max(0, temp_mw) / self.p_max) * self.rect.w), step == 1))
+                temp_mw -= self.ramp_rate
+                step += 1
+
+        self._turn_needs_update = False
+
+    def _recalculate_drag_cache(self, font, small_font):
+        """Updates only the target fill and text surfaces when the mouse moves."""
+        self._fill_w = int(self.rect.w * self.value)
+        
         target_mw = self.value * self.p_max
         actual_delta = max(-self.ramp_rate, min(self.ramp_rate, target_mw - self.current_power))
-        next_turn_mw = self.current_power + actual_delta
+        next_turn_mw = max(0.0, self.current_power + actual_delta)
 
-        text_name = font.render(f"{self.name} ({self.plant_type.upper()})", True, (0, 0, 0))
-        stats_string = f"Current: {self.current_power:.0f} MW  |  Next Hour: {next_turn_mw:.0f} MW  |  Target: {target_mw:.0f} MW"
-        text_stats = small_font.render(stats_string, True, (40, 40, 40))
-        text_percent = font.render(f"{int(self.value * 100)} %", True, (0, 0, 0))
+        # Update text depending on whether the plant is running, shutting down, or off
+        status_text = "OFF" if target_mw == 0 else f"{target_mw:.0f} MW"
+
+        self._text_name_surf = font.render(f"{self.name} ({self.plant_type.upper()})", True, (0, 0, 0))
+        stats_string = f"Current: {self.current_power:.0f} MW  |  Next Hour: {next_turn_mw:.0f} MW  |  Target: {status_text}"
+        self._text_stats_surf = small_font.render(stats_string, True, (40, 40, 40))
+        self._text_percent_surf = font.render(f"{int(self.value * 100)} %", True, (0, 0, 0))
+
+        self._drag_needs_update = False
+
+    def draw(self, screen, font, small_font):
+        """Draws the slider using separated caches."""
+        if self._turn_needs_update:
+            self._recalculate_turn_cache()
+        if self._drag_needs_update:
+            self._recalculate_drag_cache(font, small_font)
+
+        # 1. Base background
+        pygame.draw.rect(screen, (200, 200, 200), self.rect, border_radius=5)
+
+        # 2. Dynamic target fill (Turns gray if the target is 0 / OFF)
+        fill_rect = pygame.Rect(self.rect.x, self.rect.y, self._fill_w, self.rect.h)
+        fill_surface = pygame.Surface((fill_rect.w, fill_rect.h), pygame.SRCALPHA)
+        current_fill_color = self.fill_color if self.value > 0 else (100, 100, 100)
+        pygame.draw.rect(fill_surface, (*current_fill_color, 150), fill_surface.get_rect(), border_radius=5)
+        screen.blit(fill_surface, (fill_rect.x, fill_rect.y))
         
-        screen.blit(text_name, (self.rect.x, self.rect.y - 40))
-        screen.blit(text_stats, (self.rect.x, self.rect.y - 20))
-        screen.blit(text_percent, (self.rect.x + self.rect.w + 15, self.rect.y + 5))
+        # 3. Border
+        pygame.draw.rect(screen, (100, 100, 100), self.rect, 2, border_radius=5)
+
+        # 4. Draw the dead zone indicator (Red Line) if applicable
+        if self.p_min > 0:
+            pygame.draw.line(screen, (200, 0, 0), 
+                             (self.rect.x + self._p_min_px, self.rect.y), 
+                             (self.rect.x + self._p_min_px, self.rect.y + self.rect.h), 3)
+
+        # 5. The Time Ruler
+        for step_px, is_primary in self._notches:
+            thickness = 2
+            height = self.rect.h if is_primary else 10
+            pygame.draw.line(screen, (40, 40, 40), 
+                             (self.rect.x + step_px, self.rect.y + self.rect.h - height), 
+                             (self.rect.x + step_px, self.rect.y + self.rect.h), thickness)
+
+        # 6. Current power indicator
+        pygame.draw.line(screen, (255, 255, 255), (self.rect.x + self._current_px, self.rect.y - 2), (self.rect.x + self._current_px, self.rect.y + self.rect.h + 2), 3)
+        pygame.draw.line(screen, (0, 0, 0), (self.rect.x + self._current_px, self.rect.y - 2), (self.rect.x + self._current_px, self.rect.y + self.rect.h + 2), 1)
+
+        # 7. Text surfaces
+        screen.blit(self._text_name_surf, (self.rect.x, self.rect.y - 40))
+        screen.blit(self._text_stats_surf, (self.rect.x, self.rect.y - 20))
+        screen.blit(self._text_percent_surf, (self.rect.x + self.rect.w + 15, self.rect.y + 5))
 
     def handle_event(self, event):
         if event.type == pygame.MOUSEBUTTONDOWN and event.button == 1:
@@ -61,7 +143,18 @@ class Slider:
 
     def _update_value(self, mouse_x):
         rel_x = mouse_x - self.rect.x
-        self.value = max(0.0, min(1.0, rel_x / self.rect.w))
+        raw_ratio = rel_x / self.rect.w
+        min_ratio = self.p_min / max(1.0, self.p_max)
+        
+        # Snap to zero mechanic: If dragged left of the red line, shut it down.
+        if raw_ratio < min_ratio:
+            new_val = 0.0
+        else:
+            new_val = max(min_ratio, min(1.0, raw_ratio))
+            
+        if self.value != new_val:
+            self.value = new_val
+            self._drag_needs_update = True
 
 class HumanUI:
     def __init__(self, screen_width=1280, screen_height=720):
@@ -87,8 +180,8 @@ class HumanUI:
         self.fig, self.ax = plt.subplots(figsize=(6, 4), dpi=100)
         self.canvas = FigureCanvasAgg(self.fig)
     def setup_sliders(self, plants_info):
-        self.sliders = [Slider(50, 520 + (i*70), 400, 25, i, p['name'], p['type'], p['p_max'], p['ramp_rate']) 
-                        for i, p in enumerate(plants_info[:3])] 
+        self.sliders = [Slider(50, 520 + (i*70), 400, 25, i, p['name'], p['type'], p['p_max'], p['p_min'], p['ramp_rate']) 
+                        for i, p in enumerate(plants_info[:3])]
 
     def update_plants_state(self, plants_info):
         for i, plant in enumerate(plants_info[:3]): 
