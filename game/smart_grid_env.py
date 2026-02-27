@@ -92,14 +92,29 @@ class SmartGridEnv(gym.Env):
         return self._get_obs(), float(reward), False, self.current_step >= self.max_steps, info
 
     def _get_obs(self):
-        """Constructs the flat observation vector."""
-        obs = [p.current_power / p.p_max for p in self.grid.plants]
-        obs.extend([self.current_weather["actual"]["wind"], self.current_weather["actual"]["solar"], self.current_weather["actual"]["demand"]])
-        obs.extend(self.current_weather["forecast"]["wind"])
-        obs.extend(self.current_weather["forecast"]["solar"])
-        obs.extend(self.current_weather["forecast"]["demand"])
-        obs.append(self.current_step / self.max_steps)
-        return np.array(obs, dtype=np.float32)
+        """Constructs the flat observation vector natively in NumPy for maximum speed."""
+        # 1. Plants state mapping
+        plants_obs = np.array([p.current_power / max(1.0, p.p_max) for p in self.grid.plants], dtype=np.float32)
+        
+        # 2. Current weather actuals
+        actuals_obs = np.array([
+            self.current_weather["actual"]["wind"], 
+            self.current_weather["actual"]["solar"], 
+            self.current_weather["actual"]["demand"]
+        ], dtype=np.float32)
+        
+        # 3. Time step
+        step_obs = np.array([self.current_step / self.max_steps], dtype=np.float32)
+        
+        # 4. Fast C-level concatenation of all arrays + forecasts
+        return np.concatenate((
+            plants_obs,
+            actuals_obs,
+            np.array(self.current_weather["forecast"]["wind"], dtype=np.float32),
+            np.array(self.current_weather["forecast"]["solar"], dtype=np.float32),
+            np.array(self.current_weather["forecast"]["demand"], dtype=np.float32),
+            step_obs
+        ), dtype=np.float32)
 
     def _get_info(self):
         """Packages rich data for the UI rendering, including renewable forecasts and grid status."""
