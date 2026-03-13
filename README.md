@@ -9,14 +9,14 @@ This project is structured into 5 distinct phases to ensure mathematical robustn
 - [x] **Human Dashboard (`human_ui.py` & `play.py`):** Build an optimized, memory-efficient Pygame/Matplotlib interface to log human decision-making under uncertainty.
 
 ### Phase 2: Reinforcement Learning Setup (AI Training)
-- [ ] **Headless Training Script (`train_ai.py`):** Instantiate the environment without the Pygame UI to maximize frames-per-second (FPS) during training on the RTX 4070/Mac GPU
-- [ ] **Environment Wrapping:** Apply Stable Baselines 3 utilities (`DummyVecEnv`, `VecNormalize`) to strictly normalize observations and rewards for faster neural network convergence.
-- [ ] **Algorithm Implementation:** Deploy a continuous-action RL algorithm (PPO or SAC) adapted to our `Box(0.0, 1.0)` action space.
-- [ ] **TensorBoard Integration:** Configure the training loop to output logs for monitoring the learning curve, reward progression, and episode lengths.
+- [x] **Headless Training Script (`train_ai.py`):** Instantiate the environment without the Pygame UI to maximize frames-per-second (FPS) during training on the RTX 4070/Mac GPU
+- [x] **Environment Wrapping:** Apply Stable Baselines 3 utilities (`DummyVecEnv`, `VecNormalize`) to strictly normalize observations and rewards for faster neural network convergence.
+- [x] **Algorithm Implementation:** Deploy a continuous-action RL algorithm (PPO or SAC) adapted to our `Box(0.0, 1.0)` action space.
+- [x] **TensorBoard Integration:** Configure the training loop to output logs for monitoring the learning curve, reward progression, and episode lengths.
 
 ### Phase 3: AI Evaluation and Visualization
-- [ ] **Evaluation Script (`evaluate_ai.py`):** Write a script to load the trained model (e.g., `ppo_smart_grid.zip`).
-- [ ] **Visual AI Playthrough:** Connect the trained agent to the `human_ui.py` dashboard to visually observe the AI adjusting sliders and reacting to the uncertainty cone in real-time.
+- [x] **Evaluation Script (`evaluate_ai.py`):** Write a script to load the trained model (e.g., `ppo_smart_grid.zip`).
+- [x] **Visual AI Playthrough:** Connect the trained agent to the `human_ui.py` dashboard to visually observe the AI adjusting sliders and reacting to the uncertainty cone in real-time.
 - [ ] **AI Data Logging:** Ensure the AI's decisions are logged into CSV files using the exact same format as the human player for 1:1 statistical comparison.
 
 ### Phase 4: Reward Shaping and Fine-Tuning
