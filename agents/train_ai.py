@@ -64,9 +64,9 @@ def train_agent(args):
 
 def parse_args():
     parser = argparse.ArgumentParser(description="Train PPO agent for the Smart Grid environment.")
-    parser.add_argument("--w-finance", type=float, default=0.1, help="Reward weight for financial cost.")
-    parser.add_argument("--w-co2", type=float, default=0.1, help="Reward weight for CO2 emissions.")
-    parser.add_argument("--w-waste", type=float, default=0.5, help="Reward weight for wasted energy.")
+    parser.add_argument("--w-finance", type=float, default=0.2, help="Reward weight for financial cost.")
+    parser.add_argument("--w-co2", type=float, default=0.2, help="Reward weight for CO2 emissions.")
+    parser.add_argument("--w-waste", type=float, default=0.7, help="Reward weight for wasted energy.")
     parser.add_argument("--w-blackout", type=float, default=100.0, help="Reward weight for unmet demand (blackout).")
     return parser.parse_args()
 

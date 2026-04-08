@@ -4,6 +4,8 @@ import time
 import json
 import argparse
 import pygame
+import matplotlib.pyplot as plt
+import numpy as np
 from stable_baselines3 import PPO
 from stable_baselines3.common.vec_env import DummyVecEnv, VecNormalize
 from datetime import datetime
@@ -173,16 +175,58 @@ def evaluate_agent(args):
                     print("No exploit warnings triggered.")
                 print("The simulation has ended. You can now close the window.")
                 
-                # Draw a dark overlay with the final score
+                # Draw a dark overlay to signify the end
                 overlay = pygame.Surface((ui.width, ui.height), pygame.SRCALPHA)
                 overlay.fill((0, 0, 0, 180)) 
                 ui.screen.blit(overlay, (0, 0))
                 
                 font = pygame.font.SysFont("Arial", 36, bold=True)
-                text_surf = font.render(f"SIMULATION COMPLETE | Final Score: {cumulative_reward:.0f}", True, (255, 255, 255))
+                text_surf = font.render(f"SIMULATION COMPLETE | Check Radar | score: {cumulative_reward:.2f}", True, (255, 255, 255))
                 text_rect = text_surf.get_rect(center=(ui.width // 2, ui.height // 2))
                 ui.screen.blit(text_surf, text_rect)
                 pygame.display.flip()
+
+                # Generate the radar chart
+                metrics = ['Coûts (€)', 'MW Gaspillés', 'CO2 Émis (kg)', 'Fréquence Blackout (%)']
+                values = [totals["financial_cost"], totals["wasted_energy"], totals["co2_emissions"], report["blackout_frequency"] * 100]
+
+                # Use log scale so metrics with different orders of magnitude share the plot reasonably
+                plot_values = [np.log10(max(1, v)) for v in values]
+                
+                angles = np.linspace(0, 2 * np.pi, len(metrics), endpoint=False).tolist()
+
+                # Make the plot closed
+                plot_values += plot_values[:1]
+                angles += angles[:1]
+
+                fig, ax = plt.subplots(figsize=(6, 6), subplot_kw=dict(polar=True))
+                ax.fill(angles, plot_values, color='cyan', alpha=0.3)
+                ax.plot(angles, plot_values, color='cyan', linewidth=2)
+                
+                # Setup labels
+                ax.set_theta_offset(np.pi / 2)
+                ax.set_theta_direction(-1)
+                ax.set_xticks(angles[:-1])
+                ax.set_xticklabels(metrics, fontsize=12)
+
+                # Hide the radius labels (the log scale numbers)
+                ax.set_yticklabels([])
+
+                # Add the actual values near each vertex for readability
+                for idx, (angle, value) in enumerate(zip(angles[:-1], plot_values[:-1])):
+                    # Push the text slightly outward from the point
+                    ax.text(angle, value + 0.3, f"{values[idx]:.1f}", ha='center', va='center', fontsize=11, fontweight='bold', color='navy')
+
+                plt.title("Performances Physiques de l'IA (Échelle Logarithmique)", size=14, y=1.1)
+                
+                # Sauvegarder dans le dossier logs pour être sûr de pouvoir le retrouver
+                radar_path = os.path.join("logs", f"radar_chart_{datetime.now().strftime('%Y%m%d_%H%M%S')}.png")
+                plt.savefig(radar_path, bbox_inches='tight')
+                print(f"--- Graphique Radar généré et sauvegardé ici : {radar_path} ---")
+                
+                # Affichage non bloquant au cas où il s'ouvrirait en arrière-plan
+                plt.show(block=False)
+                plt.pause(0.1)
             else:
                 # Pause briefly so a human can observe the AI's strategy
                 time.sleep(0.5)

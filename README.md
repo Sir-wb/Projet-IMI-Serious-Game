@@ -22,6 +22,8 @@ This project is structured into 5 distinct phases to ensure mathematical robustn
 ### Phase 4: Reward Shaping and Fine-Tuning
 - [x] **The "Exploit" Verification:** Review the AI's learned behavior to ensure it balances the grid rather than exploiting mathematical loopholes (e.g., choosing total blackout over expensive gas costs).
 - [x] **Hyperparameter Tuning:** Adjust the weights in the reward function (`w_finance`, `w_co2`, `w_waste`, `w_blackout`) based on initial AI behavior to force complex, realistic trade-offs.
+- To fine tune:  python agents/train_ai.py --w-finance 0.12 --w-co2 0.15 --w-waste 0.7 --w-blackout 140
+
 
 ### Phase 5: Data Analysis (Phimeca Objective)
 - [ ] **Human vs. AI Comparison:** Extract and analyze the CSV logs to compare risk management strategies. 
