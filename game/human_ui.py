@@ -157,7 +157,7 @@ class Slider:
             self._drag_needs_update = True
 
 class HumanUI:
-    def __init__(self, screen_width=1280, screen_height=720):
+    def __init__(self, screen_width=1280, screen_height=720, log_prefix="human_game"):
         pygame.init()
         self.width = screen_width
         self.height = screen_height
@@ -172,7 +172,7 @@ class HumanUI:
         self.title_font = pygame.font.SysFont("Arial", 22, bold=True)
         
         os.makedirs("logs", exist_ok=True)
-        self.log_file = f"logs/human_game_{datetime.now().strftime('%Y%m%d_%H%M%S')}.csv"
+        self.log_file = f"logs/{log_prefix}_{datetime.now().strftime('%Y%m%d_%H%M%S')}.csv"
         with open(self.log_file, mode='w', newline='') as f: 
             csv.writer(f).writerow(["step", "actions", "score", "blackout"])
             

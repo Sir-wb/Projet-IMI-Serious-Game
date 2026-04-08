@@ -9,9 +9,15 @@ class SmartGridEnv(gym.Env):
     """Gymnasium environment for the Smart Grid serious game."""
     metadata = {"render_modes": ["human"], "render_fps": 30}
 
-    def __init__(self, render_mode=None):
+    def __init__(self, render_mode=None, reward_weights=None):
         super().__init__()
         self.render_mode = render_mode
+        self.reward_weights = reward_weights or {
+            "w_finance": 0.1,
+            "w_co2": 0.1,
+            "w_waste": 0.5,
+            "w_blackout": 100.0,
+        }
         
         self.num_controllable_plants = 3 
         self.forecast_horizon = 12
@@ -24,6 +30,13 @@ class SmartGridEnv(gym.Env):
         # Observation size: 3 (Controllable) + 2 (Renewables) + 3 (Current weather) + 36 (Forecasts) + 1 (Step)
         obs_size = self.num_controllable_plants + 2 + 3 + (3 * self.forecast_horizon) + 1
         self.observation_space = spaces.Box(low=-np.inf, high=np.inf, shape=(obs_size,), dtype=np.float32)
+        self.last_step_metrics = {
+            "financial_cost": 0.0,
+            "co2_emissions": 0.0,
+            "wasted_energy": 0.0,
+            "unmet_demand": 0.0,
+            "is_blackout": False,
+        }
 
     def reset(self, seed=None, options=None):
         """Resets the environment at the beginning of a new episode."""
@@ -50,6 +63,13 @@ class SmartGridEnv(gym.Env):
         # Initialize turn 0 states
         self.current_weather = self.engine.step_weather_and_demand(self.current_step, self.forecast_horizon)
         self._update_stochastic_elements()
+        self.last_step_metrics = {
+            "financial_cost": 0.0,
+            "co2_emissions": 0.0,
+            "wasted_energy": 0.0,
+            "unmet_demand": 0.0,
+            "is_blackout": False,
+        }
         
         return self._get_obs(), self._get_info()
 
@@ -84,7 +104,20 @@ class SmartGridEnv(gym.Env):
         
         balance = self.grid.step_balance()
         
-        reward = -((0.1 * total_financial_cost) + (0.1 * total_co2_emissions) + (0.5 * balance["wasted_energy"]) + (100.0 * balance["unmet_demand"]))
+        reward = -(
+            (self.reward_weights["w_finance"] * total_financial_cost)
+            + (self.reward_weights["w_co2"] * total_co2_emissions)
+            + (self.reward_weights["w_waste"] * balance["wasted_energy"])
+            + (self.reward_weights["w_blackout"] * balance["unmet_demand"])
+        )
+
+        self.last_step_metrics = {
+            "financial_cost": float(total_financial_cost),
+            "co2_emissions": float(total_co2_emissions),
+            "wasted_energy": float(balance["wasted_energy"]),
+            "unmet_demand": float(balance["unmet_demand"]),
+            "is_blackout": bool(balance["is_blackout"]),
+        }
         
         info = self._get_info()
         info["is_blackout"] = balance["is_blackout"]
@@ -131,5 +164,12 @@ class SmartGridEnv(gym.Env):
             "plants_status": [
                 {"name": p.name, "type": p.plant_type, "power": p.current_power, "p_max": p.p_max} 
                 for p in self.grid.plants
-            ]
+            ],
+            "reward_components": {
+                "financial_cost": self.last_step_metrics["financial_cost"],
+                "co2_emissions": self.last_step_metrics["co2_emissions"],
+                "wasted_energy": self.last_step_metrics["wasted_energy"],
+                "unmet_demand": self.last_step_metrics["unmet_demand"],
+            },
+            "reward_weights": self.reward_weights,
         }

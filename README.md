@@ -17,11 +17,11 @@ This project is structured into 5 distinct phases to ensure mathematical robustn
 ### Phase 3: AI Evaluation and Visualization
 - [x] **Evaluation Script (`evaluate_ai.py`):** Write a script to load the trained model (e.g., `ppo_smart_grid.zip`).
 - [x] **Visual AI Playthrough:** Connect the trained agent to the `human_ui.py` dashboard to visually observe the AI adjusting sliders and reacting to the uncertainty cone in real-time.
-- [ ] **AI Data Logging:** Ensure the AI's decisions are logged into CSV files using the exact same format as the human player for 1:1 statistical comparison.
+- [x] **AI Data Logging:** Ensure the AI's decisions are logged into CSV files using the exact same format as the human player for 1:1 statistical comparison.
 
 ### Phase 4: Reward Shaping and Fine-Tuning
-- [ ] **The "Exploit" Verification:** Review the AI's learned behavior to ensure it balances the grid rather than exploiting mathematical loopholes (e.g., choosing total blackout over expensive gas costs).
-- [ ] **Hyperparameter Tuning:** Adjust the weights in the reward function (`w_finance`, `w_co2`, `w_waste`, `w_blackout`) based on initial AI behavior to force complex, realistic trade-offs.
+- [x] **The "Exploit" Verification:** Review the AI's learned behavior to ensure it balances the grid rather than exploiting mathematical loopholes (e.g., choosing total blackout over expensive gas costs).
+- [x] **Hyperparameter Tuning:** Adjust the weights in the reward function (`w_finance`, `w_co2`, `w_waste`, `w_blackout`) based on initial AI behavior to force complex, realistic trade-offs.
 
 ### Phase 5: Data Analysis (Phimeca Objective)
 - [ ] **Human vs. AI Comparison:** Extract and analyze the CSV logs to compare risk management strategies. 

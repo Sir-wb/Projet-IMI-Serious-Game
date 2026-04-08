@@ -1,5 +1,6 @@
 import os
 import sys
+import argparse
 import gymnasium as gym
 from stable_baselines3 import PPO
 from stable_baselines3.common.vec_env import DummyVecEnv, VecNormalize
@@ -11,11 +12,22 @@ sys.path.append(os.path.abspath(project_root))
 
 from game.smart_grid_env import SmartGridEnv
 
-def train_agent():
+def build_reward_weights(args):
+    return {
+        "w_finance": args.w_finance,
+        "w_co2": args.w_co2,
+        "w_waste": args.w_waste,
+        "w_blackout": args.w_blackout,
+    }
+
+
+def train_agent(args):
     print("Initializing headless Smart Grid Environment for RL Training...")
+    reward_weights = build_reward_weights(args)
+    print(f"Using reward weights: {reward_weights}")
     
     # 1. Create the environment in headless mode
-    env = SmartGridEnv(render_mode=None)
+    env = SmartGridEnv(render_mode=None, reward_weights=reward_weights)
     
     # 2. Vectorize the environment
     vec_env = DummyVecEnv([lambda: env])
@@ -49,5 +61,15 @@ def train_agent():
     print(f"Training complete. Model saved to {model_path}.zip")
     print(f"Normalization statistics saved to {norm_path}")
 
+
+def parse_args():
+    parser = argparse.ArgumentParser(description="Train PPO agent for the Smart Grid environment.")
+    parser.add_argument("--w-finance", type=float, default=0.1, help="Reward weight for financial cost.")
+    parser.add_argument("--w-co2", type=float, default=0.1, help="Reward weight for CO2 emissions.")
+    parser.add_argument("--w-waste", type=float, default=0.5, help="Reward weight for wasted energy.")
+    parser.add_argument("--w-blackout", type=float, default=100.0, help="Reward weight for unmet demand (blackout).")
+    return parser.parse_args()
+
+
 if __name__ == "__main__":
-    train_agent()
+    train_agent(parse_args())
